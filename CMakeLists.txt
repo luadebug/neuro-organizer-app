@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.30)
 project(project_notes_database)
 
 set(AUI_VERSION v7.1.2)
+option(BUILD_SHARED_LIBS OFF "")
+
 
 file(
         DOWNLOAD
@@ -24,12 +26,12 @@ aui_link(notes_database PRIVATE
         utf8proc::utf8proc
 )
 
-target_precompile_headers(notes_database
-    PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/pch.h"
-)
-
-target_include_directories(notes_database
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-)
+#target_precompile_headers(notes_database
+#    PRIVATE
+#        "${CMAKE_CURRENT_SOURCE_DIR}/include/pch.h"
+#)
+#
+#target_include_directories(notes_database
+#    PUBLIC
+#        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+#)
