@@ -26,6 +26,8 @@ aui_link(notes_database PRIVATE
         utf8proc::utf8proc
 )
 
+aui_enable_tests(notes_database)
+
 #target_precompile_headers(notes_database
 #    PRIVATE
 #        "${CMAKE_CURRENT_SOURCE_DIR}/include/pch.h"
