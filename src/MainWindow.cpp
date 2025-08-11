@@ -20,7 +20,7 @@ AJSON_FIELDS(
     AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(textFilePath)
         AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
 
-static const auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
+static constexpr auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
     return n->title->lowercase();
 });
 
@@ -267,12 +267,30 @@ _<AView> MainWindow::notePreview(const _<Note>& note) {
     };
 
     return Vertical {
-        Label {} with_style { FontSize { 10_pt }, ATextOverflow::ELLIPSIS } &
-            note->title.readProjected(StringOneLinePreview {}),
-        Label {} with_style {
-          ATextOverflow::ELLIPSIS,
-          Opacity { 0.7f },
-        } & note->content.readProjected(StringOneLinePreview {}),
+        Label {} let {
+                it->setCustomStyle({ FontSize { 10_pt }, ATextOverflow::ELLIPSIS });
+                auto updateFolder = [it, note] {
+                    AString img = *note->imageFilePath;
+                    AString txt = *note->textFilePath;
+                    AString shown;
+                    if (!img.empty()) {
+                        APath ip(img);
+                        if (ip.exists()) {
+                            shown = ip.parent();
+                        }
+                    }
+                    if (shown.empty() && !txt.empty()) {
+                        APath tp(txt);
+                        shown = tp.parent();
+                    }
+                    if (shown.empty())
+                        shown = "(folder has not been created)";
+                    it->setText(shown);
+                };
+                updateFolder();
+                AObject::connect(note->imageFilePath.changed, [updateFolder] { updateFolder(); });
+                AObject::connect(note->textFilePath.changed, [updateFolder] { updateFolder(); });
+            },
     } with_style {
         Padding { 4_dp, 8_dp },
         BorderRadius { 8_dp },
