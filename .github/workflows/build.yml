@@ -25,7 +25,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         debug_or_release: [Debug, Release]
-        shared_or_static: [shared, static]
+        shared_or_static: [static]
         arch: [x86_64]
 
     steps:
