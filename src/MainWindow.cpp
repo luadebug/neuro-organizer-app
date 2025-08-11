@@ -2,7 +2,7 @@
 #include "stringUtils.h"
 #include "MainWindow.h"
 
-class TitAUI_LETextArea;
+class TitleTextArea;
 using namespace declarative;
 using namespace ass;
 
@@ -24,7 +24,7 @@ static constexpr auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, 
     return n->title->lowercase();
 });
 
-class TitAUI_LETextArea : public ATextArea {
+class TitleTextArea : public ATextArea {
 public:
     using ATextArea::ATextArea;
     void onCharEntered(char16_t c) override {
@@ -223,7 +223,7 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
     }
 
     return AScrollArea::Builder().withContents(Vertical {
-      _new<TitAUI_LETextArea>("Untitled") AUI_LET {
+      _new<TitleTextArea>("Untitled") AUI_LET {
               it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
               AObject::biConnect(note->title, it->text());
               if (note->content->empty()) {
