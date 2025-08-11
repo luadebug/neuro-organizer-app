@@ -11,12 +11,13 @@ struct Note {
     AProperty<AString> content;
     AProperty<AString> imageFilePath;
     AProperty<AString> timestamp;
+    AProperty<AString> base64;
 };
 
 AJSON_FIELDS(
     Note,
     AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(imageFilePath)
-        AJSON_FIELDS_ENTRY(timestamp))
+        AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
 
 static const auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
     return n->title->lowercase();
@@ -159,6 +160,9 @@ void MainWindow::removeCurrentNote() {
     if (it != notes.end()) {
         it = notes.erase(it);
         if (!notes.empty()) {
+            auto removed_timestamp_folder = APath {(*mCurrentNote)->imageFilePath} / "..";
+            if (removed_timestamp_folder.exists())
+                removed_timestamp_folder.removeFileRecursive();
             mCurrentNote = (it != notes.end()) ? *it : notes.back();
         } else {
             mCurrentNote = nullptr;
@@ -306,6 +310,7 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
                 ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
             }
             (*mCurrentNote)->imageFilePath = dstPath;
+            (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
             markDirty();
             if (auto icon = AImageDrawable::fromUrl(url)) {
                 return Centered { _new<ADrawableView>(icon) with_style { MinSize { 64_dp, 64_dp } } };
