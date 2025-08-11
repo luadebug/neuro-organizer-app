@@ -9,6 +9,7 @@ using namespace ass;
 struct Note {
     AProperty<AString> title;
     AProperty<AString> content;
+    AProperty<AString> textFilePath;
     AProperty<AString> imageFilePath;
     AProperty<AString> timestamp;
     AProperty<AString> base64;
@@ -16,8 +17,8 @@ struct Note {
 
 AJSON_FIELDS(
     Note,
-    AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(imageFilePath)
-        AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
+    AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(textFilePath)
+    AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
 
 static const auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
     return n->title->lowercase();
@@ -160,12 +161,17 @@ void MainWindow::removeCurrentNote() {
     if (it != notes.end()) {
         it = notes.erase(it);
         if (!notes.empty()) {
-            auto removed_timestamp_folder = APath { (*mCurrentNote)->imageFilePath } / "..";
-            if (removed_timestamp_folder.exists())
-                removed_timestamp_folder.removeFileRecursive();
+            auto removed_timestamp_folder_by_imageFilePath = APath { (*mCurrentNote)->imageFilePath }.parent();
+            if (removed_timestamp_folder_by_imageFilePath.exists())
+                removed_timestamp_folder_by_imageFilePath.removeFileRecursive();
+            auto removed_timestamp_folder_by_textFilePath = APath { (*mCurrentNote)->textFilePath }.parent();
+            if (removed_timestamp_folder_by_textFilePath.exists())
+                removed_timestamp_folder_by_textFilePath.removeFileRecursive();
             mCurrentNote = (it != notes.end()) ? *it : notes.back();
         } else {
             mCurrentNote = nullptr;
+            auto reports = APath( "reports" );
+            reports.removeFileRecursive();
         }
 
         markDirty();
@@ -175,22 +181,22 @@ void MainWindow::removeCurrentNote() {
 
 void MainWindow::markDirty() {
     mDirty = true;
-    if (mCurrentNote.value())
-    {
-        auto editing_note = APath { (*mCurrentNote)->imageFilePath } / "..";
-        if (editing_note.exists()) {
-            AFileOutputStream fos(editing_note / "info.txt");
-            fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
-        } else {
-            auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            auto tm = std::localtime(&time_now);
-            std::ostringstream timestamp;
-            timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
-            auto p = APath("reports") / APath(timestamp.str());
-            AFileOutputStream fos(p / "info.txt");
-            fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
-        }
+    if (mCurrentNote == nullptr) return;
+    auto note = *mCurrentNote;
+    if (note->timestamp->empty()) {
+        auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        auto tm = std::localtime(&time_now);
+        std::ostringstream timestamp;
+        timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
+        note->timestamp = timestamp.str();
+        auto folder = APath("reports") / APath(note->timestamp);
+        folder.makeDirs();
+        note->textFilePath = folder / "info.txt";
     }
+    auto textFilePath = APath(note->textFilePath);
+    textFilePath.parent().makeDirs();
+    AFileOutputStream fos(textFilePath);
+    fos << note->title->toStdString() << "\n\n" << note->content->toStdString();
 }
 
 void MainWindow::observeChangesForDirty(const _<Note>& note) {
