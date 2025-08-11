@@ -10,13 +10,18 @@ struct Note {
     AProperty<AString> title;
     AProperty<AString> content;
     AProperty<AString> imageFilePath;
+    AProperty<AString> timestamp;
 };
 
-AJSON_FIELDS(Note,
-    AJSON_FIELDS_ENTRY(title)
-    AJSON_FIELDS_ENTRY(content)
-    AJSON_FIELDS_ENTRY(imageFilePath)
-)
+AJSON_FIELDS(
+    Note,
+    AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(imageFilePath)
+        AJSON_FIELDS_ENTRY(timestamp))
+
+static const auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
+    return n->title->lowercase();
+});
+
 class TitleTextArea : public ATextArea {
 public:
     using ATextArea::ATextArea;
@@ -61,15 +66,14 @@ MainWindow::MainWindow() : AWindow("Notes") {
                 },
               },
 
-                Horizontal {
-                    Icon { ":img/search.svg" } with_style { MinSize { 40_dp, 40_dp }},
-                    Label { "Search" } with_style { FontSize { 20_pt } },
-                    _new<ATextArea>("Search notes...") let {
+              Horizontal {
+                Icon { ":img/search.svg" } with_style { MinSize { 40_dp, 40_dp } },
+                Label { "Search" } with_style { FontSize { 20_pt } },
+                _new<ATextArea>("Search notes...") let {
                         AObject::biConnect(mSearchQuery, it->text());
                         it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
                     },
-                },
-
+              },
 
               Horizontal {} with_style {
                 MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
@@ -165,9 +169,7 @@ void MainWindow::removeCurrentNote() {
     }
 }
 
-void MainWindow::markDirty() {
-    mDirty = true;
-}
+void MainWindow::markDirty() { mDirty = true; }
 
 void MainWindow::observeChangesForDirty(const _<Note>& note) {
     aui::reflect::for_each_field_value(
@@ -191,8 +193,7 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
                   it->focus();
               }
           },
-        Horizontal {} with_style {
-          MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
+      Horizontal {} with_style { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
       _new<ATextArea>("Text") with_style { FontSize { 14_pt }, Expanding() } && note->content,
       _new<ADrawableView>() let {
               it->setCustomStyle({
@@ -214,11 +215,8 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
               AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
           },
       _new<ADragNDropView>() with_style {
-          BackgroundSolid { AColor::TRANSPARENT_WHITE },
-          MaxSize {0_pt, 0_pt},
-          Margin {0 }
-      },
-    } );
+        BackgroundSolid { AColor::TRANSPARENT_WHITE }, MaxSize { 0_pt, 0_pt }, Margin { 0 } },
+    });
 }
 
 _<AView> MainWindow::notePreview(const _<Note>& note) {
@@ -246,22 +244,16 @@ _<AView> MainWindow::notePreview(const _<Note>& note) {
 }
 
 void MainWindow::recomputeFiltered() {
-    AVector<_<Note>> filtered;
     const auto& notes = *mNotes;
     const std::string q = utf8_fold(mSearchQuery->toStdString());
-    if (q.empty()) {
-        filtered = notes;
-    } else {
-        filtered.reserve(notes.size());
-        for (const auto& note : notes) {
-            const std::string titleF = utf8_fold(note->title->toStdString());
-            const std::string contentF = utf8_fold(note->content->toStdString());
-            if (titleF.find(q) != std::string::npos || contentF.find(q) != std::string::npos) {
-                filtered << note;
-            }
-        }
-    }
-    mFilteredNotes = std::move(filtered);
+
+    const auto searchFilter = ranges::views::filter([&](const _<Note>& note) {
+        const std::string titleF = utf8_fold(note->title->toStdString());
+        const std::string contentF = utf8_fold(note->content->toStdString());
+        return q.empty() || titleF.find(q) != std::string::npos || contentF.find(q) != std::string::npos;
+    });
+
+    mFilteredNotes = notes | searchFilter | ranges::to<AVector<_<Note>>>() | NOTES_SORT_BY_TITLE;
 }
 
 void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
@@ -272,66 +264,55 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
     }
 
     auto surface = createOverlappingSurface({ 0, 0 }, { 100, 100 }, false);
-    // _<AViewContainer> popup = Vertical {
-    //     Label { "Drop event" } with_style {
-    //         FontSize { 18_pt },
-    //         ATextAlign::CENTER,
-    //       },
-      [&]() -> _<AView> {
-          if (auto u = event.data.urls()) {
-              auto url = u->first();
-              auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-              auto tm = std::localtime(&time_now);
-              std::ostringstream timestamp;
-              timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
-              auto p = APath("reports") / APath(
-                timestamp.str()
-                  ).filenameWithoutExtension();
-              p.makeDirs();
-              {
-                  AFileOutputStream fos(p / "info.txt");
-                  fos << (*mCurrentNote)->title->toStdString() << "\n\n";
-                  fos << (*mCurrentNote)->content->toStdString();
-              }
-
-              AString srcStr = url.full();
-              APath srcPath;
-              if (srcStr.startsWith("file://")) {
-                  AString s = srcStr;
-                  if (s.startsWith("file:///")) s = s.substr(8);
-                  else                           s = s.substr(7);
-                  srcPath = APath{s};
-              } else {
-                  srcPath = APath{srcStr};
-              }
-              APath dstPath = p / srcPath.filename();
-              try {
-                  auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
-                  AFileOutputStream out(dstPath);
-                  out.write(buf.data(), buf.size());
-                  ALogger::info("Report") << "Image copied to: " << dstPath;
-              } catch (const AException& e) {
-                  ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
-              }
-              (*mCurrentNote)->imageFilePath = dstPath;
-              markDirty();
-              if (auto icon = AImageDrawable::fromUrl(url)) {
-                  return Centered {
-                      _new<ADrawableView>(icon) with_style {
-                          MinSize { 64_dp, 64_dp }
-                      }
-                  };
-              }
-          }
-          return nullptr;
-        }(); //(),
-        //AText::fromString("Caught drop event. See the logger output for contents.") with_style { ATextAlign::CENTER, MinSize { 100_dp, 40_dp } },
-        //Centered { Button { "OK" }.clicked(this, [surface] { surface->close(); }) }
-    //};
-    //ALayoutInflater::inflate(surface, popup);
-    //popup->pack();
-    //surface->setOverlappingSurfaceSize(popup->size());
-    //surface->setOverlappingSurfacePosition((size() - *popup->size()) / 2);
+    [&]() -> _<AView> {
+        if (auto u = event.data.urls()) {
+            auto url = u->first();
+            auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            auto tm = std::localtime(&time_now);
+            std::ostringstream timestamp;
+            timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
+            auto p = APath("reports") / APath(timestamp.str()).filenameWithoutExtension();
+            if ((*mCurrentNote)->timestamp->empty()) {
+                p.makeDirs();
+                (*mCurrentNote)->timestamp = timestamp.str();
+            } else {
+                p = APath("reports") / APath((*mCurrentNote)->timestamp).filenameWithoutExtension();
+                auto checking_picture = APath { (*mCurrentNote)->imageFilePath };
+                if (checking_picture.exists()) {
+                    checking_picture.removeFile();
+                }
+            }
+            AFileOutputStream fos(p / "info.txt");
+            fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
+            AString srcStr = url.full();
+            APath srcPath;
+            if (srcStr.startsWith("file://")) {
+                AString s = srcStr;
+                if (s.startsWith("file:///"))
+                    s = s.substr(8);
+                else
+                    s = s.substr(7);
+                srcPath = APath { s };
+            } else {
+                srcPath = APath { srcStr };
+            }
+            APath dstPath = p / srcPath.filename();
+            try {
+                auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
+                AFileOutputStream out(dstPath);
+                out.write(buf.data(), buf.size());
+                ALogger::info("Report") << "Image copied to: " << dstPath;
+            } catch (const AException& e) {
+                ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
+            }
+            (*mCurrentNote)->imageFilePath = dstPath;
+            markDirty();
+            if (auto icon = AImageDrawable::fromUrl(url)) {
+                return Centered { _new<ADrawableView>(icon) with_style { MinSize { 64_dp, 64_dp } } };
+            }
+        }
+        return nullptr;
+    }();
 }
 
 bool MainWindow::onDragEnter(const ADragNDrop::EnterEvent& event) { return mCurrentNote != nullptr; }
