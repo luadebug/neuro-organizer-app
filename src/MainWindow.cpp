@@ -160,7 +160,7 @@ void MainWindow::removeCurrentNote() {
     if (it != notes.end()) {
         it = notes.erase(it);
         if (!notes.empty()) {
-            auto removed_timestamp_folder = APath {(*mCurrentNote)->imageFilePath} / "..";
+            auto removed_timestamp_folder = APath { (*mCurrentNote)->imageFilePath } / "..";
             if (removed_timestamp_folder.exists())
                 removed_timestamp_folder.removeFileRecursive();
             mCurrentNote = (it != notes.end()) ? *it : notes.back();
@@ -173,7 +173,22 @@ void MainWindow::removeCurrentNote() {
     }
 }
 
-void MainWindow::markDirty() { mDirty = true; }
+void MainWindow::markDirty() {
+    mDirty = true;
+    auto editing_note = APath { (*mCurrentNote)->imageFilePath } / "..";
+    if (editing_note.exists()) {
+        AFileOutputStream fos(editing_note / "info.txt");
+        fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
+    } else {
+        auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        auto tm = std::localtime(&time_now);
+        std::ostringstream timestamp;
+        timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
+        auto p = APath("reports") / APath(timestamp.str());
+        AFileOutputStream fos(p / "info.txt");
+        fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
+    }
+}
 
 void MainWindow::observeChangesForDirty(const _<Note>& note) {
     aui::reflect::for_each_field_value(
@@ -275,12 +290,12 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
             auto tm = std::localtime(&time_now);
             std::ostringstream timestamp;
             timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
-            auto p = APath("reports") / APath(timestamp.str()).filenameWithoutExtension();
+            auto p = APath("reports") / APath(timestamp.str());
             if ((*mCurrentNote)->timestamp->empty()) {
                 p.makeDirs();
                 (*mCurrentNote)->timestamp = timestamp.str();
             } else {
-                p = APath("reports") / APath((*mCurrentNote)->timestamp).filenameWithoutExtension();
+                p = APath("reports") / APath((*mCurrentNote)->timestamp);
                 auto checking_picture = APath { (*mCurrentNote)->imageFilePath };
                 if (checking_picture.exists()) {
                     checking_picture.removeFile();
