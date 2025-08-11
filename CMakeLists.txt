@@ -28,6 +28,13 @@ aui_link(notes_database PRIVATE
 
 aui_enable_tests(notes_database)
 
+# Setup icon, display name, etc
+aui_app(TARGET notes_database
+        NAME "AUINeuroOrganizer"
+        VENDOR "AUI Project"
+        ICON "assets/img/icon.svg"
+)
+
 #target_precompile_headers(notes_database
 #    PRIVATE
 #        "${CMAKE_CURRENT_SOURCE_DIR}/include/pch.h"
