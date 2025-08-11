@@ -29,14 +29,14 @@ jobs:
         arch: [x86_64]
         generator: ["Ninja"]
 
-      include:
-        - os: windows-latest
-          generator: "Visual Studio 17 2022"
-          additional_cmake_flags: '-A x64'
+        include:
+          - os: windows-latest
+            generator: "Visual Studio 17 2022"
+            additional_cmake_flags: '-A x64'
 
-        - os: ubuntu-latest
-          generator: "Ninja"
-          additional_cmake_flags: ''
+          - os: ubuntu-latest
+            generator: "Ninja"
+            additional_cmake_flags: ''
 
     steps:
       - name: Fetch sources
