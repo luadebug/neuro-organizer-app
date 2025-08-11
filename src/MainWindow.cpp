@@ -18,7 +18,7 @@ struct Note {
 AJSON_FIELDS(
     Note,
     AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(textFilePath)
-    AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
+        AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
 
 static const auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
     return n->title->lowercase();
@@ -169,9 +169,13 @@ void MainWindow::removeCurrentNote() {
                 removed_timestamp_folder_by_textFilePath.removeFileRecursive();
             mCurrentNote = (it != notes.end()) ? *it : notes.back();
         } else {
+            (*mCurrentNote)->title = "Untitled";
+            (*mCurrentNote)->content = "";
             mCurrentNote = nullptr;
-            auto reports = APath( "reports" );
+            auto reports = APath("reports");
             reports.removeFileRecursive();
+            auto notes_json = APath("notes.json");
+            notes_json.removeFile();
         }
 
         markDirty();
@@ -181,7 +185,8 @@ void MainWindow::removeCurrentNote() {
 
 void MainWindow::markDirty() {
     mDirty = true;
-    if (mCurrentNote == nullptr) return;
+    if (mCurrentNote == nullptr)
+        return;
     auto note = *mCurrentNote;
     if (note->timestamp->empty()) {
         auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
