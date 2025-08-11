@@ -14,5 +14,5 @@ TEST(UtfFoldTest, UnicodeFoldGermanEszett) {
 }
 
 TEST(UtfFoldTest, TurkishDotlessI) {
-    ASSERT_EQ(utf8_fold("Iıİi"), "iiii");
+    ASSERT_EQ(utf8_fold("Iıİi"), "iıi̇i");
 }
