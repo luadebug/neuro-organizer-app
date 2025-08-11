@@ -171,6 +171,10 @@ void MainWindow::removeCurrentNote() {
         } else {
             (*mCurrentNote)->title = "Untitled";
             (*mCurrentNote)->content = "";
+            (*mCurrentNote)->base64 = "";
+            (*mCurrentNote)->imageFilePath = "";
+            (*mCurrentNote)->textFilePath = "";
+            (*mCurrentNote)->timestamp = "";
             mCurrentNote = nullptr;
             auto reports = APath("reports");
             reports.removeFileRecursive();
