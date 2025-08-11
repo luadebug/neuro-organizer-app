@@ -175,18 +175,21 @@ void MainWindow::removeCurrentNote() {
 
 void MainWindow::markDirty() {
     mDirty = true;
-    auto editing_note = APath { (*mCurrentNote)->imageFilePath } / "..";
-    if (editing_note.exists()) {
-        AFileOutputStream fos(editing_note / "info.txt");
-        fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
-    } else {
-        auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        auto tm = std::localtime(&time_now);
-        std::ostringstream timestamp;
-        timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
-        auto p = APath("reports") / APath(timestamp.str());
-        AFileOutputStream fos(p / "info.txt");
-        fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
+    if (mCurrentNote.value())
+    {
+        auto editing_note = APath { (*mCurrentNote)->imageFilePath } / "..";
+        if (editing_note.exists()) {
+            AFileOutputStream fos(editing_note / "info.txt");
+            fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
+        } else {
+            auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            auto tm = std::localtime(&time_now);
+            std::ostringstream timestamp;
+            timestamp << std::put_time(tm, "%Y-%m-%d_%H-%M-%S");
+            auto p = APath("reports") / APath(timestamp.str());
+            AFileOutputStream fos(p / "info.txt");
+            fos << (*mCurrentNote)->title->toStdString() << "\n\n" << (*mCurrentNote)->content->toStdString();
+        }
     }
 }
 
