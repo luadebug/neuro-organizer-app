@@ -2,7 +2,7 @@
 #include "stringUtils.h"
 #include "MainWindow.h"
 
-class TitleTextArea;
+class TitAUI_LETextArea;
 using namespace declarative;
 using namespace ass;
 
@@ -24,7 +24,7 @@ static constexpr auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, 
     return n->title->lowercase();
 });
 
-class TitleTextArea : public ATextArea {
+class TitAUI_LETextArea : public ATextArea {
 public:
     using ATextArea::ATextArea;
     void onCharEntered(char16_t c) override {
@@ -58,33 +58,33 @@ MainWindow::MainWindow() : AWindow("Notes") {
             Vertical {
               Centered {
                 Horizontal {
-                  Button { Icon { ":img/remove.svg" } with_style { MinSize { 40_dp, 40_dp } },
-                           Label { "Remove Note" } with_style { FontSize { 20_pt } } }
+                  Button { Icon { ":img/remove.svg" } AUI_WITH_STYLE { MinSize { 40_dp, 40_dp } },
+                           Label { "Remove Note" } AUI_WITH_STYLE { FontSize { 20_pt } } }
                           .connect(&AView::clicked, this, &MainWindow::removeCurrentNote) &
                       mCurrentNote.readProjected([](const _<Note>& n) { return n != nullptr; }) > &AView::setEnabled,
-                  Button { Icon { ":img/new.svg" } with_style { MinSize { 40_dp, 40_dp } },
-                           Label { "Add Note" } with_style { FontSize { 20_pt } } }
+                  Button { Icon { ":img/new.svg" } AUI_WITH_STYLE { MinSize { 40_dp, 40_dp } },
+                           Label { "Add Note" } AUI_WITH_STYLE { FontSize { 20_pt } } }
                       .connect(&AView::clicked, this, &MainWindow::newNote),
                 },
               },
 
               Horizontal {
-                Icon { ":img/search.svg" } with_style { MinSize { 40_dp, 40_dp } },
-                Label { "Search" } with_style { FontSize { 20_pt } },
-                _new<ATextArea>("Search notes...") let {
+                Icon { ":img/search.svg" } AUI_WITH_STYLE { MinSize { 40_dp, 40_dp } },
+                Label { "Search" } AUI_WITH_STYLE { FontSize { 20_pt } },
+                _new<ATextArea>("Search notes...") AUI_LET {
                         AObject::biConnect(mSearchQuery, it->text());
                         it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
                     },
               },
 
-              Horizontal {} with_style {
+              Horizontal {} AUI_WITH_STYLE {
                 MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
 
               AScrollArea::Builder()
                   .withContents(
                       AUI_DECLARATIVE_FOR(note, *mFilteredNotes, AVerticalLayout) {
                       observeChangesForDirty(note);
-                      return notePreview(note) let {
+                      return notePreview(note) AUI_LET {
                           connect(it->clicked, [this, note] { mCurrentNote = note; });
                           it& mCurrentNote > [note](AView& view, const _<Note>& currentNote) {
                               ALOG_DEBUG("CHECK") << "currentNote == note " << currentNote << " == " << note;
@@ -93,16 +93,16 @@ MainWindow::MainWindow() : AWindow("Notes") {
                       };
                   })
                   .build(),
-            } with_style { MinSize { 200_dp } },
+            } AUI_WITH_STYLE { MinSize { 200_dp } },
 
             // 🟥 Right panel
             Vertical::Expanding {
               CustomLayout::Expanding {} &
               mCurrentNote.readProjected([this](const _<Note>& note) -> _<AView> { return noteEditor(note); }) }
-                << ".plain_bg" with_style { MinSize { 200_dp } },
+                << ".plain_bg" AUI_WITH_STYLE { MinSize { 200_dp } },
 
           })
-          .build() with_style { Expanding() },
+          .build() AUI_WITH_STYLE { Expanding() },
     });
 
     if (mNotes->empty()) {
@@ -223,16 +223,16 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
     }
 
     return AScrollArea::Builder().withContents(Vertical {
-      _new<TitleTextArea>("Untitled") let {
+      _new<TitAUI_LETextArea>("Untitled") AUI_LET {
               it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
               AObject::biConnect(note->title, it->text());
               if (note->content->empty()) {
                   it->focus();
               }
           },
-      Horizontal {} with_style { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
-      _new<ATextArea>("Text") with_style { FontSize { 14_pt }, Expanding() } && note->content,
-      _new<ADrawableView>() let {
+      Horizontal {} AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
+      _new<ATextArea>("Text") AUI_WITH_STYLE { FontSize { 14_pt }, Expanding() } && note->content,
+      _new<ADrawableView>() AUI_LET {
               it->setCustomStyle({
                 MinSize { 25_dp, 100_dp },
                 Margin { 100_dp, 100_dp },
@@ -251,7 +251,7 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
               updatePreview();
               AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
           },
-      _new<ADragNDropView>() with_style {
+      _new<ADragNDropView>() AUI_WITH_STYLE {
         BackgroundSolid { AColor::TRANSPARENT_WHITE }, MaxSize { 0_pt, 0_pt }, Margin { 0 } },
     });
 }
@@ -267,7 +267,7 @@ _<AView> MainWindow::notePreview(const _<Note>& note) {
     };
 
     return Vertical {
-        Label {} let {
+        Label {} AUI_LET {
                 it->setCustomStyle({ FontSize { 10_pt }, ATextOverflow::ELLIPSIS });
                 auto updateFolder = [it, note] {
                     AString img = *note->imageFilePath;
@@ -291,7 +291,7 @@ _<AView> MainWindow::notePreview(const _<Note>& note) {
                 AObject::connect(note->imageFilePath.changed, [updateFolder] { updateFolder(); });
                 AObject::connect(note->textFilePath.changed, [updateFolder] { updateFolder(); });
             },
-    } with_style {
+    } AUI_WITH_STYLE {
         Padding { 4_dp, 8_dp },
         BorderRadius { 8_dp },
         Margin { 4_dp, 8_dp },
@@ -364,7 +364,7 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
             (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
             markDirty();
             if (auto icon = AImageDrawable::fromUrl(url)) {
-                return Centered { _new<ADrawableView>(icon) with_style { MinSize { 64_dp, 64_dp } } };
+                return Centered { _new<ADrawableView>(icon) AUI_WITH_STYLE { MinSize { 64_dp, 64_dp } } };
             }
         }
         return nullptr;
