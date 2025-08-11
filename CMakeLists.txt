@@ -12,7 +12,7 @@ file(
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
 auib_import(aui https://github.com/aui-framework/aui
-        COMPONENTS core curl image views json
+        COMPONENTS core crypt curl image views json
         VERSION ${AUI_VERSION})
 
 auib_import(utf8proc https://github.com/JuliaStrings/utf8proc
@@ -22,7 +22,7 @@ aui_executable(notes_database)
 aui_compile_assets(notes_database)
 
 aui_link(notes_database PRIVATE
-        aui::core aui::curl aui::image aui::views aui::json
+        aui::core aui::crypt aui::curl aui::image aui::views aui::json
         utf8proc::utf8proc
 )
 
