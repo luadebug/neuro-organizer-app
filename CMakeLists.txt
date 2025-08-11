@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
-project(project_notes_database)
+project(project_notes_database
+        VERSION 1.0.1 # CI_PROJECT_VERSION
+)
 
 set(AUI_VERSION v8.0.0-rc.7)
 #option(BUILD_SHARED_LIBS OFF "")
