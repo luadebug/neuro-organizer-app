@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 project(project_notes_database)
 
 set(AUI_VERSION v7.1.2)
-option(BUILD_SHARED_LIBS OFF "")
+#option(BUILD_SHARED_LIBS OFF "")
 
 
 file(
@@ -12,7 +12,7 @@ file(
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
 auib_import(aui https://github.com/aui-framework/aui
-        COMPONENTS core image views json crypt
+        COMPONENTS core image views json
         VERSION ${AUI_VERSION})
 
 auib_import(utf8proc https://github.com/JuliaStrings/utf8proc
@@ -22,7 +22,7 @@ aui_executable(notes_database)
 aui_compile_assets(notes_database)
 
 aui_link(notes_database PRIVATE
-        aui::core aui::image aui::views aui::json aui::crypt
+        aui::core aui::image aui::views aui::json
         utf8proc::utf8proc
 )
 
