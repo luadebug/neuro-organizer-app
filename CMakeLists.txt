@@ -4,7 +4,7 @@ project(project_notes_database
 )
 
 set(AUI_VERSION v8.0.0-rc.7)
-#option(BUILD_SHARED_LIBS OFF "")
+option(BUILD_SHARED_LIBS OFF "")
 
 
 file(
