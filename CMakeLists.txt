@@ -32,7 +32,6 @@ aui_link(notes_database PRIVATE
 
 aui_enable_tests(notes_database)
 
-# Setup icon, display name, etc
 aui_app(TARGET notes_database
         NAME "AUI Neuro Organizer"
         VENDOR "AUI Project"
