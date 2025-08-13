@@ -8,6 +8,7 @@ AUI_ENTRY {
     auto updater = _new<MyUpdater>();
     updater->handleStartup(args);
 
-    _new<MainWindow>(std::move(updater))->show();
+    const auto w = _new<MainWindow>(std::move(updater));
+    w->show();
     return 0;
 }

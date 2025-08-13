@@ -249,74 +249,80 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
     }
 
     return AScrollArea::Builder().withContents(Vertical {
-      _new<TitleTextArea>("Untitled") AUI_LET {
-              it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
-              AObject::biConnect(note->title, it->text());
-              if (note->content->empty()) {
-                  it->focus();
-              }
-          },
-      Horizontal {} AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
-      _new<ATextArea>("Text") AUI_WITH_STYLE { FontSize { 14_pt }, Expanding() } && note->content,
-      _new<ADrawableView>() AUI_LET {
-              it->setCustomStyle({
-                MinSize { 25_dp, 100_dp },
-                Margin { 100_dp, 100_dp },
-                BorderRadius { 8_dp },
-                BackgroundSolid { AColor::TRANSPARENT_WHITE },
-              });
+        Label {} AUI_LET {
+            it->setCustomStyle({ FontSize { 10_pt }, ATextOverflow::ELLIPSIS });
+            auto updateFolder = [it, note] {
+                AString img = *note->imageFilePath;
+                AString txt = *note->textFilePath;
+                AString shown;
+                if (!img.empty()) {
+                    APath ip(img);
+                    if (ip.exists()) {
+                        shown = ip.parent();
+                    }
+                }
+                if (shown.empty() && !txt.empty()) {
+                    APath tp(txt);
+                    shown = tp.parent();
+                }
+                if (shown.empty())
+                    shown = "(folder has not been created)";
+                it->setText(shown);
+            };
+            updateFolder();
+            AObject::connect(note->imageFilePath.changed, [updateFolder] { updateFolder(); });
+            AObject::connect(note->textFilePath.changed, [updateFolder] { updateFolder(); });
+        },
 
-              auto updatePreview = [it, note] {
-                  const AString& img = *note->imageFilePath;
-                  if (!img.empty()) {
-                      it->setDrawable(IDrawable::fromUrl(img));
-                  } else {
-                      it->setDrawable(nullptr);
-                  }
-              };
-              updatePreview();
-              AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
-          },
-      _new<ADragNDropView>() AUI_WITH_STYLE {
-        BackgroundSolid { AColor::TRANSPARENT_WHITE }, MaxSize { 0_pt, 0_pt }, Margin { 0 } },
+        Horizontal {} AUI_WITH_STYLE {
+            MinSize { 0_dp, 1_dp },
+            BackgroundSolid { AColor::BLACK },
+            Margin { 4_dp, 0_dp }
+        },
+
+        _new<ATextArea>("Text") AUI_WITH_STYLE {
+            FontSize { 14_pt },
+            Expanding()
+        } && note->content,
+
+        _new<ADrawableView>() AUI_LET {
+            it->setCustomStyle({
+                FixedSize { {}, 400_dp },
+                BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
+            });
+
+            auto updatePreview = [it, note] {
+                const AString& img = *note->imageFilePath;
+                if (!img.empty()) {
+                    it->setDrawable(IDrawable::fromUrl(img));
+                } else {
+                    it->setDrawable(nullptr);
+                }
+            };
+            updatePreview();
+            AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
+        },
+
+        _new<ADragNDropView>() AUI_WITH_STYLE {
+            BackgroundSolid { AColor::TRANSPARENT_WHITE },
+            MaxSize { 0_pt, 0_pt },
+            Margin { 0 }
+        },
     });
 }
 
 _<AView> MainWindow::notePreview(const _<Note>& note) {
-    struct StringOneLinePreview {
-        AString operator()(const AString& s) const {
-            if (s.empty()) {
-                return "Empty";
-            }
-            return s.restrictLength(100, "").replacedAll('\n', ' ');
-        }
-    };
-
     return Vertical {
-        Label {} AUI_LET {
-                it->setCustomStyle({ FontSize { 10_pt }, ATextOverflow::ELLIPSIS });
-                auto updateFolder = [it, note] {
-                    AString img = *note->imageFilePath;
-                    AString txt = *note->textFilePath;
-                    AString shown;
-                    if (!img.empty()) {
-                        APath ip(img);
-                        if (ip.exists()) {
-                            shown = ip.parent();
-                        }
-                    }
-                    if (shown.empty() && !txt.empty()) {
-                        APath tp(txt);
-                        shown = tp.parent();
-                    }
-                    if (shown.empty())
-                        shown = "(folder has not been created)";
-                    it->setText(shown);
-                };
-                updateFolder();
-                AObject::connect(note->imageFilePath.changed, [updateFolder] { updateFolder(); });
-                AObject::connect(note->textFilePath.changed, [updateFolder] { updateFolder(); });
-            },
+        _new<TitleTextArea>(*note->title) AUI_LET {
+            it->setCustomStyle({
+                FontSize { 14_pt },
+                Border { 0 },
+                Padding { 0 },
+                Margin { 0 },
+                Expanding(),
+            });
+            AObject::biConnect(note->title, it->text());
+        },
     } AUI_WITH_STYLE {
         Padding { 4_dp, 8_dp },
         BorderRadius { 8_dp },
@@ -344,7 +350,6 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
         ALogger::info("Drop") << "[" << k << "] = " << AString::fromUtf8(v);
     }
 
-    auto surface = createOverlappingSurface({ 0, 0 }, { 100, 100 }, false);
     [&]() -> _<AView> {
         if (auto u = event.data.urls()) {
             auto url = u->first();
@@ -390,7 +395,13 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
             (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
             markDirty();
             if (auto icon = AImageDrawable::fromUrl(url)) {
-                return Centered { _new<ADrawableView>(icon) AUI_WITH_STYLE { MinSize { 64_dp, 64_dp } } };
+                return
+                Centered {
+                    _new<ADrawableView>(icon) AUI_WITH_STYLE {
+                        FixedSize { {}, 400_dp },
+                        BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
+                    }
+                };
             }
         }
         return nullptr;

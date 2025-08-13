@@ -24,7 +24,7 @@ AFuture<void> MyUpdater::checkForUpdatesImpl() {
                        "Expected: "
                     << predicate.getQualifierDebug() << ", got: "
                     << (githubLatestRelease.assets |
-                        ranges::view::transform(&aui::updater::github::LatestReleaseResponse::Asset::name));
+                        ranges::views::transform(&aui::updater::github::LatestReleaseResponse::Asset::name));
                 return;
             }
             ALogger::info(LOG_TAG) << "To download: " << (mDownloadUrl = it->browser_download_url);
