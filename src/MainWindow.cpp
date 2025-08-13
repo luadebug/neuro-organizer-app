@@ -287,10 +287,8 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
 
         _new<ADrawableView>() AUI_LET {
             it->setCustomStyle({
-                MinSize { 25_dp, 100_dp },
-                Margin { 100_dp, 100_dp },
-                BorderRadius { 8_dp },
-                BackgroundSolid { AColor::TRANSPARENT_WHITE },
+                FixedSize { {}, 400_dp },
+                BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
             });
 
             auto updatePreview = [it, note] {
@@ -319,7 +317,6 @@ _<AView> MainWindow::notePreview(const _<Note>& note) {
             it->setCustomStyle({
                 FontSize { 14_pt },
                 Border { 0 },
-
                 Padding { 0 },
                 Margin { 0 },
                 Expanding(),
@@ -398,7 +395,13 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
             (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
             markDirty();
             if (auto icon = AImageDrawable::fromUrl(url)) {
-                return Centered { _new<ADrawableView>(icon) AUI_WITH_STYLE { MinSize { 64_dp, 64_dp } } };
+                return
+                Centered {
+                    _new<ADrawableView>(icon) AUI_WITH_STYLE {
+                        FixedSize { {}, 400_dp },
+                        BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
+                    }
+                };
             }
         }
         return nullptr;
