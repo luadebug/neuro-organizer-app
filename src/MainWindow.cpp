@@ -27,7 +27,7 @@ static constexpr auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, 
 class TitleTextArea : public ATextArea {
 public:
     using ATextArea::ATextArea;
-    void onCharEntered(char16_t c) override {
+    void onCharEntered(const char16_t c) override {
         if (c == '\r') {
             AWindow::current()->focusNextView();
             return;
@@ -36,10 +36,11 @@ public:
     }
 };
 
-MainWindow::MainWindow() : AWindow("Notes") {
+MainWindow::MainWindow(_<MyUpdater> updater) :
+    AWindow("Notes"), mUpdater(std::move(updater)) {
     allowDragNDrop();
     setExtraStylesheet(AStylesheet {
-      { c(".plain_bg"), BackgroundSolid { AColor::GRAY } },
+      { c(".plain_bg"), BackgroundSolid { AColor::WHITE } },
       { t<AWindow>(), Padding { 0 } },
     });
 
@@ -76,6 +77,31 @@ MainWindow::MainWindow() : AWindow("Notes") {
                         it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
                     },
               },
+
+                Horizontal {} AUI_WITH_STYLE {
+                    MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp }
+                },
+
+                CustomLayout {} & mUpdater->status.readProjected([&updater = mUpdater](const std::any& status) -> _<AView> {
+                    if (std::any_cast<AUpdater::StatusIdle>(&status)) {
+                        return _new<AButton>("Check for updates").connect(&AView::clicked, AUI_SLOT(updater)::checkForUpdates);
+                    }
+                    if (std::any_cast<AUpdater::StatusCheckingForUpdates>(&status)) {
+                        return Label { "Checking for updates..." };
+                    }
+                    if (auto downloading = std::any_cast<AUpdater::StatusDownloading>(&status)) {
+                        return Vertical {
+                            Label { "Downloading..." },
+                            _new<AProgressBar>() & downloading->progress,
+                        };
+                    }
+                    if (std::any_cast<AUpdater::StatusWaitingForApplyAndRestart>(&status)) {
+                        return _new<AButton>("Apply update and restart")
+                            .connect(&AView::clicked, AUI_SLOT(updater)::applyUpdateAndRestart);
+                    }
+                    return nullptr;
+                }),
+
 
               Horizontal {} AUI_WITH_STYLE {
                 MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },

@@ -4,6 +4,8 @@ project(project_notes_database
 )
 
 set(AUI_VERSION v8.0.0-rc.7)
+set(UTF8PROC_VERSION 72918b954b4a85c00106842b073a4e5178209f95)
+
 option(BUILD_SHARED_LIBS OFF "")
 
 
@@ -14,17 +16,17 @@ file(
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
 auib_import(aui https://github.com/aui-framework/aui
-        COMPONENTS core crypt curl image views json
+        COMPONENTS core crypt curl image views json updater
         VERSION ${AUI_VERSION})
 
 auib_import(utf8proc https://github.com/JuliaStrings/utf8proc
-        VERSION master)
+        VERSION ${UTF8PROC_VERSION})
 
 aui_executable(notes_database)
 aui_compile_assets(notes_database)
 
 aui_link(notes_database PRIVATE
-        aui::core aui::crypt aui::curl aui::image aui::views aui::json
+        aui::core aui::crypt aui::curl aui::image aui::views aui::json aui::updater
         utf8proc::utf8proc
 )
 
@@ -32,7 +34,7 @@ aui_enable_tests(notes_database)
 
 # Setup icon, display name, etc
 aui_app(TARGET notes_database
-        NAME "AUINeuroOrganizer"
+        NAME "AUI Neuro Organizer"
         VENDOR "AUI Project"
         ICON "assets/img/icon.svg"
 )
