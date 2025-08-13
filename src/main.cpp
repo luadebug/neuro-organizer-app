@@ -5,7 +5,9 @@ using namespace declarative;
 using namespace ass;
 
 AUI_ENTRY {
-    auto w = _new<MainWindow>();
-    w->show();
+    auto updater = _new<MyUpdater>();
+    updater->handleStartup(args);
+
+    _new<MainWindow>(std::move(updater))->show();
     return 0;
 }
