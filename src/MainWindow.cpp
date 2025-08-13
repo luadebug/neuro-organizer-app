@@ -383,18 +383,24 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
                 srcPath = APath { srcStr };
             }
             APath dstPath = p / srcPath.filename();
-            if (auto icon = AImageDrawable::fromUrl(srcPath)) {
-                try {
-                    auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
-                    AFileOutputStream out(dstPath);
-                    out.write(buf.data(), buf.size());
-                    ALogger::info("Report") << "Image copied to: " << dstPath;
-                } catch (const AException& e) {
-                    ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
+            try {
+                if (auto icon = AImageDrawable::fromUrl(srcPath)) {
+                    try {
+                        auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
+                        AFileOutputStream out(dstPath);
+                        out.write(buf.data(), buf.size());
+                        ALogger::info("Report") << "Image copied to: " << dstPath;
+                    } catch (const AException& e) {
+                        ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
+                    }
+                    (*mCurrentNote)->imageFilePath = dstPath;
+                    (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
+                    markDirty();
                 }
-                (*mCurrentNote)->imageFilePath = dstPath;
-                (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
-                markDirty();
+            }
+            catch (const AException& e) {
+                ALogger::warn("Report") << "Failed to load source image from " << srcPath << ": " << e;
+                return Centered {};
             }
             try {
                 if (auto icon = AImageDrawable::fromUrl(url)) {
