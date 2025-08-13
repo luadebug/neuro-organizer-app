@@ -383,39 +383,37 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
                 srcPath = APath { srcStr };
             }
             APath dstPath = p / srcPath.filename();
-            try {
-                if (auto icon = AImageDrawable::fromUrl(srcPath)) {
-                    try {
-                        auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
-                        AFileOutputStream out(dstPath);
-                        out.write(buf.data(), buf.size());
-                        ALogger::info("Report") << "Image copied to: " << dstPath;
-                    } catch (const AException& e) {
-                        ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
+
+
+            if (IDrawable::fromUrl(srcPath) != 0) {
+                try {
+                    auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
+                    AFileOutputStream out(dstPath);
+                    out.write(buf.data(), buf.size());
+                    ALogger::info("Report") << "Image copied to: " << dstPath;
+                } catch (const AException& e) {
+                    ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
+                }
+                (*mCurrentNote)->imageFilePath = dstPath;
+                (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
+                markDirty();
+
+
+                try {
+                    if (auto icon = AImageDrawable::fromUrl(url)) {
+                        return
+                        Centered {
+                            _new<ADrawableView>(icon) AUI_WITH_STYLE {
+                                FixedSize { {}, 400_dp },
+                                BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
+                            }
+                        };
                     }
-                    (*mCurrentNote)->imageFilePath = dstPath;
-                    (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
-                    markDirty();
                 }
-            }
-            catch (const AException& e) {
-                ALogger::warn("Report") << "Failed to load source image from " << srcPath << ": " << e;
-                return Centered {};
-            }
-            try {
-                if (auto icon = AImageDrawable::fromUrl(url)) {
-                    return
-                    Centered {
-                        _new<ADrawableView>(icon) AUI_WITH_STYLE {
-                            FixedSize { {}, 400_dp },
-                            BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
-                        }
-                    };
+                catch (const AException& e) {
+                    ALogger::warn("Report") << "Failed to render image from " << url.full() << ": " << e;
+                    return Centered {};
                 }
-            }
-            catch (const AException& e) {
-                ALogger::warn("Report") << "Failed to render image from " << url.full() << ": " << e;
-                return Centered {};
             }
         }
         return nullptr;
