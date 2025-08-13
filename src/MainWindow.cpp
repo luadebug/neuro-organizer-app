@@ -344,7 +344,7 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
         ALogger::info("Drop") << "[" << k << "] = " << AString::fromUtf8(v);
     }
 
-    auto surface = createOverlappingSurface({ 0, 0 }, { 100, 100 }, false);
+    auto surface = createOverlappingSurface({ 0, 0 }, { 0, 0 }, false);
     [&]() -> _<AView> {
         if (auto u = event.data.urls()) {
             auto url = u->first();
