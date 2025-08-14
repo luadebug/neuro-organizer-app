@@ -12,13 +12,18 @@ struct Note {
     AProperty<AString> textFilePath;
     AProperty<AString> imageFilePath;
     AProperty<AString> timestamp;
+};
+
+struct NotePictureBase64 {
     AProperty<AString> base64;
 };
 
 AJSON_FIELDS(
     Note,
     AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(textFilePath)
-        AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(base64))
+        AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp))
+
+AJSON_FIELDS(NotePictureBase64, AJSON_FIELDS_ENTRY(base64))
 
 static constexpr auto NOTES_SORT_BY_TITLE = ranges::actions::sort(std::less {}, [](const _<Note>& n) {
     return n->title->lowercase();
@@ -36,8 +41,7 @@ public:
     }
 };
 
-MainWindow::MainWindow(_<MyUpdater> updater) :
-    AWindow("Notes"), mUpdater(std::move(updater)) {
+MainWindow::MainWindow(_<MyUpdater> updater) : AWindow("Notes"), mUpdater(std::move(updater)) {
     allowDragNDrop();
     setExtraStylesheet(AStylesheet {
       { c(".plain_bg"), BackgroundSolid { AColor::WHITE } },
@@ -62,7 +66,8 @@ MainWindow::MainWindow(_<MyUpdater> updater) :
                   Button { Icon { ":img/remove.svg" } AUI_WITH_STYLE { MinSize { 40_dp, 40_dp } },
                            Label { "Remove Note" } AUI_WITH_STYLE { FontSize { 20_pt } } }
                           .connect(&AView::clicked, this, &MainWindow::removeCurrentNote) &
-                      mCurrentNote.readProjected([](const _<Note>& n) { return n != nullptr; }) > &AView::setEnabled,
+                      mCurrentNote.readProjected([](const _<Note>& n) {
+        return n != nullptr; }) > &AView::setEnabled,
                   Button { Icon { ":img/new.svg" } AUI_WITH_STYLE { MinSize { 40_dp, 40_dp } },
                            Label { "Add Note" } AUI_WITH_STYLE { FontSize { 20_pt } } }
                       .connect(&AView::clicked, this, &MainWindow::newNote),
@@ -76,66 +81,67 @@ MainWindow::MainWindow(_<MyUpdater> updater) :
                         AObject::biConnect(mSearchQuery, it->text());
                         it->setCustomStyle({ FontSize { 20_pt }, Expanding { 1, 0 } });
                     },
-              },
+}
+,
 
-                Horizontal {} AUI_WITH_STYLE {
-                    MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp }
-                },
+    Horizontal {}
+AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
 
-                CustomLayout {} & mUpdater->status.readProjected([&updater = mUpdater](const std::any& status) -> _<AView> {
-                    if (std::any_cast<AUpdater::StatusIdle>(&status)) {
-                        return _new<AButton>("Check for updates").connect(&AView::clicked, AUI_SLOT(updater)::checkForUpdates);
-                    }
-                    if (std::any_cast<AUpdater::StatusCheckingForUpdates>(&status)) {
-                        return Label { "Checking for updates..." };
-                    }
-                    if (auto downloading = std::any_cast<AUpdater::StatusDownloading>(&status)) {
-                        return Vertical {
-                            Label { "Downloading..." },
-                            _new<AProgressBar>() & downloading->progress,
-                        };
-                    }
-                    if (std::any_cast<AUpdater::StatusWaitingForApplyAndRestart>(&status)) {
-                        return _new<AButton>("Apply update and restart")
-                            .connect(&AView::clicked, AUI_SLOT(updater)::applyUpdateAndRestart);
-                    }
-                    return nullptr;
-                }),
+    CustomLayout {} & mUpdater->status.readProjected([&updater = mUpdater](const std::any& status) -> _<AView> {
+        if (std::any_cast<AUpdater::StatusIdle>(&status)) {
+            return _new<AButton>("Check for updates (Current version: " +
+                                 std::string(AUI_PP_STRINGIZE(AUI_CMAKE_PROJECT_VERSION)) + ")")
+                .connect(&AView::clicked, AUI_SLOT(updater)::checkForUpdates);
+        }
+        if (std::any_cast<AUpdater::StatusCheckingForUpdates>(&status)) {
+            return Label { "Checking for updates..." };
+        }
+        if (auto downloading = std::any_cast<AUpdater::StatusDownloading>(&status)) {
+            return Vertical {
+                Label { "Downloading..." },
+                _new<AProgressBar>() & downloading->progress,
+            };
+        }
+        if (std::any_cast<AUpdater::StatusWaitingForApplyAndRestart>(&status)) {
+            return _new<AButton>("Apply update and restart")
+                .connect(&AView::clicked, AUI_SLOT(updater)::applyUpdateAndRestart);
+        }
+        return nullptr;
+    }),
 
+    Horizontal {}
+AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
 
-              Horizontal {} AUI_WITH_STYLE {
-                MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
+    AScrollArea::Builder()
+        .withContents(
+            AUI_DECLARATIVE_FOR(note, *mFilteredNotes, AVerticalLayout) {
+            observeChangesForDirty(note);
+            return notePreview(note) AUI_LET {
+                connect(it->clicked, [this, note] { mCurrentNote = note; });
+                it& mCurrentNote > [note](AView& view, const _<Note>& currentNote) {
+                    ALOG_DEBUG("CHECK") << "currentNote == note " << currentNote << " == " << note;
+                    view.setAssName(".plain_bg", currentNote == note);
+                };
+            };
+        })
+        .build(),
+}
+AUI_WITH_STYLE { MinSize { 200_dp } },
 
-              AScrollArea::Builder()
-                  .withContents(
-                      AUI_DECLARATIVE_FOR(note, *mFilteredNotes, AVerticalLayout) {
-                      observeChangesForDirty(note);
-                      return notePreview(note) AUI_LET {
-                          connect(it->clicked, [this, note] { mCurrentNote = note; });
-                          it& mCurrentNote > [note](AView& view, const _<Note>& currentNote) {
-                              ALOG_DEBUG("CHECK") << "currentNote == note " << currentNote << " == " << note;
-                              view.setAssName(".plain_bg", currentNote == note);
-                          };
-                      };
-                  })
-                  .build(),
-            } AUI_WITH_STYLE { MinSize { 200_dp } },
-
-            // 🟥 Right panel
-            Vertical::Expanding {
-              CustomLayout::Expanding {} &
-              mCurrentNote.readProjected([this](const _<Note>& note) -> _<AView> { return noteEditor(note); }) }
-                << ".plain_bg" AUI_WITH_STYLE { MinSize { 200_dp } },
-
-          })
+    // 🟥 Right panel
+    Vertical::Expanding {
+        CustomLayout::Expanding {} &
+        mCurrentNote.readProjected([this](const _<Note>& note) -> _<AView> { return noteEditor(note); })
+    } << ".plain_bg" AUI_WITH_STYLE { MinSize { 200_dp } },
+})
           .build() AUI_WITH_STYLE { Expanding() },
-    });
+});
 
-    if (mNotes->empty()) {
-        newNote();
-    } else if (*mCurrentNote == nullptr && !mNotes->empty()) {
-        mCurrentNote = (*mNotes)[0];
-    }
+if (mNotes->empty()) {
+    newNote();
+} else if (*mCurrentNote == nullptr && !mNotes->empty()) {
+    mCurrentNote = (*mNotes)[0];
+}
 }
 
 MainWindow::~MainWindow() {
@@ -150,6 +156,10 @@ void MainWindow::load() {
             return;
         }
         aui::from_json(AJson::fromStream(AFileInputStream("notes.json")), mNotes);
+        if (!"notes_base64.json"_path.isRegularFileExists()) {
+            return;
+        }
+        aui::from_json(AJson::fromStream(AFileInputStream("notes_base64.json")), mNotesBase64);
     } catch (const AException& e) {
         ALogger::info("MainWindow") << "Can't load notes: " << e;
     }
@@ -157,12 +167,15 @@ void MainWindow::load() {
 
 void MainWindow::save() {
     AFileOutputStream("notes.json") << aui::to_json(*mNotes);
+    AFileOutputStream("notes_base64.json") << aui::to_json(*mNotesBase64);
     mDirty = false;
 }
 
 void MainWindow::newNote() {
     auto note = aui::ptr::manage_shared(new Note { .title = "Untitled" });
     mNotes.writeScope()->push_back(note);
+    auto noteBase64 = aui::ptr::manage_shared(new NotePictureBase64 { .base64 = "" });
+    mNotesBase64.writeScope()->push_back(noteBase64);
     mCurrentNote = note;
     mSearchQuery = "";
 }
@@ -183,29 +196,39 @@ void MainWindow::removeCurrentNote() {
     }
 
     auto& notes = *mNotes.writeScope();
+    auto& notesBase64 = *mNotesBase64.writeScope();
+
+    // Find the index of the note to remove
     auto it = ranges::find(notes, noteToRemove);
     if (it != notes.end()) {
+        auto index = std::distance(notes.begin(), it);
+
+        // erase from both vectors
         it = notes.erase(it);
+        notesBase64.erase(notesBase64.begin() + index);
+
         if (!notes.empty()) {
+            // clean up files for the removed note
             auto removed_timestamp_folder_by_imageFilePath = APath { (*mCurrentNote)->imageFilePath }.parent();
             if (removed_timestamp_folder_by_imageFilePath.exists())
                 removed_timestamp_folder_by_imageFilePath.removeFileRecursive();
+
             auto removed_timestamp_folder_by_textFilePath = APath { (*mCurrentNote)->textFilePath }.parent();
             if (removed_timestamp_folder_by_textFilePath.exists())
                 removed_timestamp_folder_by_textFilePath.removeFileRecursive();
+
             mCurrentNote = (it != notes.end()) ? *it : notes.back();
         } else {
             (*mCurrentNote)->title = "Untitled";
             (*mCurrentNote)->content = "";
-            (*mCurrentNote)->base64 = "";
             (*mCurrentNote)->imageFilePath = "";
             (*mCurrentNote)->textFilePath = "";
             (*mCurrentNote)->timestamp = "";
+
             mCurrentNote = nullptr;
-            auto reports = APath("reports");
-            reports.removeFileRecursive();
-            auto notes_json = APath("notes.json");
-            notes_json.removeFile();
+            APath("reports").removeFileRecursive();
+            APath("notes.json").removeFile();
+            APath("notes_base64.json").removeFile();
         }
 
         markDirty();
@@ -252,82 +275,74 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
         Label {} AUI_LET {
             it->setCustomStyle({ FontSize { 10_pt }, ATextOverflow::ELLIPSIS });
             auto updateFolder = [it, note] {
-                AString img = *note->imageFilePath;
-                AString txt = *note->textFilePath;
-                AString shown;
-                if (!img.empty()) {
-                    APath ip(img);
-                    if (ip.exists()) {
-                        shown = ip.parent();
-                    }
-                }
-                if (shown.empty() && !txt.empty()) {
-                    APath tp(txt);
-                    shown = tp.parent();
-                }
-                if (shown.empty())
-                    shown = "(folder has not been created)";
-                it->setText(shown);
+        AString img = *note->imageFilePath;
+        AString txt = *note->textFilePath;
+        AString shown;
+        if (!img.empty()) {
+            APath ip(img);
+            if (ip.exists()) {
+                shown = ip.parent();
+            }
+        }
+        if (shown.empty() && !txt.empty()) {
+            APath tp(txt);
+            shown = tp.parent();
+        }
+        if (shown.empty())
+            shown = "(folder has not been created)";
+        it->setText(shown);
             };
             updateFolder();
-            AObject::connect(note->imageFilePath.changed, [updateFolder] { updateFolder(); });
-            AObject::connect(note->textFilePath.changed, [updateFolder] { updateFolder(); });
-        },
+            AObject::connect(note->imageFilePath.changed, [updateFolder] {
+        updateFolder(); });
+            AObject::connect(note->textFilePath.changed, [updateFolder] {
+        updateFolder(); });
+}
+,
 
-        Horizontal {} AUI_WITH_STYLE {
-            MinSize { 0_dp, 1_dp },
-            BackgroundSolid { AColor::BLACK },
-            Margin { 4_dp, 0_dp }
-        },
+    Horizontal {}
+AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Margin { 4_dp, 0_dp } },
 
-        _new<ATextArea>("Text") AUI_WITH_STYLE {
-            FontSize { 14_pt },
-            Expanding()
-        } && note->content,
+    _new<ATextArea>("Text") AUI_WITH_STYLE { FontSize { 14_pt }, Expanding() } && note->content,
 
-        _new<ADrawableView>() AUI_LET {
-            it->setCustomStyle({
-                FixedSize { {}, 400_dp },
-                BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
-            });
+    _new<ADrawableView>() AUI_LET {
+    it->setCustomStyle({ FixedSize { {}, 400_dp }, BackgroundImage { {}, {}, {}, Sizing::CONTAIN } });
 
-            auto updatePreview = [it, note] {
-                const AString& img = *note->imageFilePath;
-                if (!img.empty()) {
-                    it->setDrawable(IDrawable::fromUrl(img));
-                } else {
-                    it->setDrawable(nullptr);
-                }
-            };
-            updatePreview();
-            AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
-        },
+    auto updatePreview = [it, note] {
+        const AString& img = *note->imageFilePath;
+        if (!img.empty()) {
+            it->setDrawable(IDrawable::fromUrl(img));
+        } else {
+            it->setDrawable(nullptr);
+        }
+    };
+    updatePreview();
+    AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
+}
+,
 
-        _new<ADragNDropView>() AUI_WITH_STYLE {
-            BackgroundSolid { AColor::TRANSPARENT_WHITE },
-            MaxSize { 0_pt, 0_pt },
-            Margin { 0 }
-        },
-    });
+    _new<ADragNDropView>()
+        AUI_WITH_STYLE { BackgroundSolid { AColor::TRANSPARENT_WHITE }, MaxSize { 0_pt, 0_pt }, Margin { 0 } },
+});
 }
 
 _<AView> MainWindow::notePreview(const _<Note>& note) {
-    return Vertical {
-        _new<TitleTextArea>(*note->title) AUI_LET {
-            it->setCustomStyle({
-                FontSize { 14_pt },
-                Border { 0 },
-                Padding { 0 },
-                Margin { 0 },
-                Expanding(),
-            });
-            AObject::biConnect(note->title, it->text());
-        },
-    } AUI_WITH_STYLE {
-        Padding { 4_dp, 8_dp },
-        BorderRadius { 8_dp },
-        Margin { 4_dp, 8_dp },
-    };
+    return Vertical { _new<TitleTextArea>(*note->title) AUI_LET { it->setCustomStyle({
+      FontSize { 14_pt },
+      Border { 0 },
+      Padding { 0 },
+      Margin { 0 },
+      Expanding(),
+    });
+    AObject::biConnect(note->title, it->text());
+}
+,
+}
+AUI_WITH_STYLE {
+    Padding { 4_dp, 8_dp },
+    BorderRadius { 8_dp },
+    Margin { 4_dp, 8_dp },
+};
 }
 
 void MainWindow::recomputeFiltered() {
@@ -384,7 +399,6 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
             }
             APath dstPath = p / srcPath.filename();
 
-
             if (IDrawable::fromUrl(srcPath) != 0) {
                 try {
                     auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
@@ -392,25 +406,40 @@ void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
                     out.write(buf.data(), buf.size());
                     ALogger::info("Report") << "Image copied to: " << dstPath;
                 } catch (const AException& e) {
-                    ALogger::warn("Report") << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
+                    ALogger::warn("Report")
+                        << "Failed to copy image from " << srcPath << " to " << dstPath << ": " << e;
                 }
                 (*mCurrentNote)->imageFilePath = dstPath;
-                (*mCurrentNote)->base64 = AByteBuffer::fromStream(AFileInputStream(dstPath)).toBase64String();
-                markDirty();
 
+                // Update base64 in the corresponding NotePictureBase64
+                try {
+                    auto buf = AByteBuffer::fromStream(AFileInputStream(srcPath));
+                    AString base64Str = buf.toBase64String();
+                    auto& notes = *mNotes;
+                    auto it = ranges::find(notes, *mCurrentNote);
+                    if (it != notes.end()) {
+                        size_t index = std::distance(notes.begin(), it);
+                        auto& base64Vector = *mNotesBase64.writeScope();
+                        if (index < base64Vector.size()) {
+                            base64Vector[index]->base64 = base64Str;
+                        } else {
+                            ALogger::warn("MainWindow") << "Index out of bounds for mNotesBase64";
+                        }
+                    } else {
+                        ALogger::warn("MainWindow") << "Current note not found in mNotes";
+                    }
+                } catch (const AException& e) {
+                    ALogger::warn("MainWindow") << "Failed to convert image to base64: " << e;
+                }
+
+                markDirty();
 
                 try {
                     if (auto icon = AImageDrawable::fromUrl(url)) {
-                        return
-                        Centered {
-                            _new<ADrawableView>(icon) AUI_WITH_STYLE {
-                                FixedSize { {}, 400_dp },
-                                BackgroundImage{{}, {}, {}, Sizing::CONTAIN }
-                            }
-                        };
+                        return Centered { _new<ADrawableView>(icon) AUI_WITH_STYLE {
+                          FixedSize { {}, 400_dp }, BackgroundImage { {}, {}, {}, Sizing::CONTAIN } } };
                     }
-                }
-                catch (const AException& e) {
+                } catch (const AException& e) {
                     ALogger::warn("Report") << "Failed to render image from " << url.full() << ": " << e;
                     return Centered {};
                 }

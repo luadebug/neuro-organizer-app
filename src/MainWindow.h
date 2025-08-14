@@ -14,6 +14,7 @@
 
 #include "MyUpdater.h"
 
+struct NotePictureBase64;
 struct Note;
 
 class MainWindow : public AWindow {
@@ -36,6 +37,7 @@ private:
     bool onDragEnter(const ADragNDrop::EnterEvent& event) override;
 
     AProperty<AVector<_<Note>>> mNotes;
+    AProperty<AVector<_<NotePictureBase64>>> mNotesBase64;
     AProperty<_<Note>> mCurrentNote;
     AProperty<bool> mDirty = false;
     AProperty<AString> mSearchQuery;
