@@ -331,15 +331,11 @@ AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Marg
 _<AView> MainWindow::notePreview(const _<Note>& note) {
     return Vertical { Horizontal {
         _new<ADrawableView>().connect( &ADrawableView::clicked, this, [this, note] { note->isPinned = !note->isPinned; recomputeFiltered(); } ) AUI_LET {
-            auto updateIcon = [it, note] {
+            AObject::connect(note->isPinned, it, [it, note] {
                 it->setDrawable(IDrawable::fromUrl(
                     note->isPinned ? ":img/marked.svg" : ":img/unmarked.svg"
                 ));
-            };
-
-            updateIcon();
-
-            AObject::connect(note->isPinned.changed, it, updateIcon);
+            });
 
             it->setCustomStyle({
                 MinSize { 40_dp, 40_dp },
