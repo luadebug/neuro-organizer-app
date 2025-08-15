@@ -12,6 +12,7 @@ struct Note {
     AProperty<AString> textFilePath;
     AProperty<AString> imageFilePath;
     AProperty<AString> timestamp;
+    AProperty<bool> isPinned;
 };
 
 struct NotePictureBase64 {
@@ -21,7 +22,7 @@ struct NotePictureBase64 {
 AJSON_FIELDS(
     Note,
     AJSON_FIELDS_ENTRY(title) AJSON_FIELDS_ENTRY(content) AJSON_FIELDS_ENTRY(textFilePath)
-        AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp))
+        AJSON_FIELDS_ENTRY(imageFilePath) AJSON_FIELDS_ENTRY(timestamp) AJSON_FIELDS_ENTRY(isPinned))
 
 AJSON_FIELDS(NotePictureBase64, AJSON_FIELDS_ENTRY(base64))
 
@@ -224,6 +225,7 @@ void MainWindow::removeCurrentNote() {
             (*mCurrentNote)->imageFilePath = "";
             (*mCurrentNote)->textFilePath = "";
             (*mCurrentNote)->timestamp = "";
+            (*mCurrentNote)->isPinned = false;
 
             mCurrentNote = nullptr;
             APath("reports").removeFileRecursive();
@@ -327,25 +329,47 @@ AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Marg
 }
 
 _<AView> MainWindow::notePreview(const _<Note>& note) {
-    return Vertical { _new<TitleTextArea>(*note->title) AUI_LET { it->setCustomStyle({
-      FontSize { 14_pt },
-      Border { 0 },
-      Padding { 0 },
-      Margin { 0 },
-      Expanding(),
-    });
-    AObject::biConnect(note->title, it->text());
-}
-,
-}
-AUI_WITH_STYLE {
-    Padding { 4_dp, 8_dp },
-    BorderRadius { 8_dp },
-    Margin { 4_dp, 8_dp },
-};
+    return Vertical { Horizontal {
+        _new<ADrawableView>().connect( &ADrawableView::clicked, this, [this, note] { note->isPinned = !note->isPinned; recomputeFiltered(); } ) AUI_LET {
+            auto updateIcon = [it, note] {
+                it->setDrawable(IDrawable::fromUrl(
+                    note->isPinned ? ":img/marked.svg" : ":img/unmarked.svg"
+                ));
+            };
+
+            updateIcon();
+
+            AObject::connect(note->isPinned.changed, it, updateIcon);
+
+            it->setCustomStyle({
+                MinSize { 40_dp, 40_dp },
+                ACursor::POINTER
+            });
+        },
+
+        _new<TitleTextArea>(*note->title) AUI_LET {
+            it->setCustomStyle({
+                FontSize { 14_pt },
+                Border { 0 },
+                Padding { 0 },
+                Margin { 0 },
+                Expanding(),
+            });
+            AObject::biConnect(note->title, it->text());
+        }
+    }}
+    AUI_WITH_STYLE {
+        Padding { 4_dp, 8_dp },
+        BorderRadius { 8_dp },
+        Margin { 4_dp, 8_dp },
+    };
 }
 
 void MainWindow::recomputeFiltered() {
+    static constexpr auto NOTES_SORT = ranges::actions::sort([](const _<Note>& a, const _<Note>& b) {
+    return std::make_tuple(!a->isPinned, a->title->lowercase()) <
+            std::make_tuple(!b->isPinned, b->title->lowercase());
+    });
     const auto& notes = *mNotes;
     const std::string q = utf8_fold(mSearchQuery->toStdString());
 
@@ -355,7 +379,7 @@ void MainWindow::recomputeFiltered() {
         return q.empty() || titleF.find(q) != std::string::npos || contentF.find(q) != std::string::npos;
     });
 
-    mFilteredNotes = notes | searchFilter | ranges::to<AVector<_<Note>>>() | NOTES_SORT_BY_TITLE;
+    mFilteredNotes = notes | searchFilter | ranges::to<AVector<_<Note>>>() | NOTES_SORT_BY_TITLE | NOTES_SORT;
 }
 
 void MainWindow::onDragDrop(const ADragNDrop::DropEvent& event) {
