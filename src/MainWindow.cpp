@@ -50,7 +50,7 @@ MainWindow::MainWindow(_<MyUpdater> updater) : AWindow("Notes"), mUpdater(std::m
     });
 
     load();
-    connect(mNotes, this, &MainWindow::markDirty);
+    connect(mNotes.changed, this, &MainWindow::markDirty);
 
     AObject::connect(mNotes, [this] { recomputeFiltered(); });
     AObject::connect(mSearchQuery, [this] { recomputeFiltered(); });
@@ -263,7 +263,7 @@ void MainWindow::observeChangesForDirty(const _<Note>& note) {
         *note,
         aui::lambda_overloaded {
           [&](auto& field) {},
-          [&](APropertyReadable auto& field) { AObject::connect(field, this, &MainWindow::markDirty); },
+          [&](APropertyReadable auto& field) { AObject::connect(field.changed, this, &MainWindow::markDirty); },
         });
 }
 
