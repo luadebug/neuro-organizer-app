@@ -50,11 +50,10 @@ MainWindow::MainWindow(_<MyUpdater> updater) : AWindow("Notes"), mUpdater(std::m
     });
 
     load();
-    connect(mNotes.changed, this, &MainWindow::markDirty);
+    connect(mNotes, this, &MainWindow::markDirty);
 
-    AObject::connect(mNotes.changed, [this] { recomputeFiltered(); });
-    AObject::connect(mSearchQuery.changed, [this] { recomputeFiltered(); });
-    recomputeFiltered();
+    AObject::connect(mNotes, [this] { recomputeFiltered(); });
+    AObject::connect(mSearchQuery, [this] { recomputeFiltered(); });
 
     setContents(Vertical {
       ASplitter::Horizontal()
@@ -264,7 +263,7 @@ void MainWindow::observeChangesForDirty(const _<Note>& note) {
         *note,
         aui::lambda_overloaded {
           [&](auto& field) {},
-          [&](APropertyReadable auto& field) { AObject::connect(field.changed, this, &MainWindow::markDirty); },
+          [&](APropertyReadable auto& field) { AObject::connect(field, this, &MainWindow::markDirty); },
         });
 }
 
@@ -294,10 +293,9 @@ _<AView> MainWindow::noteEditor(const _<Note>& note) {
             shown = "(folder has not been created)";
         it->setText(shown);
             };
-            updateFolder();
-            AObject::connect(note->imageFilePath.changed, [updateFolder] {
+            AObject::connect(note->imageFilePath, [updateFolder] {
         updateFolder(); });
-            AObject::connect(note->textFilePath.changed, [updateFolder] {
+            AObject::connect(note->textFilePath, [updateFolder] {
         updateFolder(); });
 }
 ,
@@ -318,8 +316,7 @@ AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Marg
             it->setDrawable(nullptr);
         }
     };
-    updatePreview();
-    AObject::connect(note->imageFilePath.changed, [updatePreview] { updatePreview(); });
+    AObject::connect(note->imageFilePath, [updatePreview] { updatePreview(); });
 }
 ,
 
@@ -329,35 +326,32 @@ AUI_WITH_STYLE { MinSize { 0_dp, 1_dp }, BackgroundSolid { AColor::BLACK }, Marg
 }
 
 _<AView> MainWindow::notePreview(const _<Note>& note) {
-    return Vertical { Horizontal {
-        _new<ADrawableView>().connect( &ADrawableView::clicked, this, [this, note] { note->isPinned = !note->isPinned; recomputeFiltered(); } ) AUI_LET {
-            auto updateIcon = [it, note] {
-                it->setDrawable(IDrawable::fromUrl(
-                    note->isPinned ? ":img/marked.svg" : ":img/unmarked.svg"
-                ));
-            };
+    return Vertical {
+        Horizontal {
+            _new<ADrawableView>().connect(&ADrawableView::clicked, this, [this, note] {
+                note->isPinned = !note->isPinned;
+                recomputeFiltered();
+            }) AUI_LET {
+                AObject::connect(note->isPinned, it, [it, note] {
+                    it->setDrawable(IDrawable::fromUrl(note->isPinned ? ":img/marked.svg" : ":img/unmarked.svg"));
+                });
 
-            updateIcon();
+                it->setCustomStyle({ MinSize { 40_dp, 40_dp }, ACursor::POINTER });
+            }
+            ,
 
-            AObject::connect(note->isPinned.changed, it, updateIcon);
-
-            it->setCustomStyle({
-                MinSize { 40_dp, 40_dp },
-                ACursor::POINTER
-            });
-        },
-
-        _new<TitleTextArea>(*note->title) AUI_LET {
-            it->setCustomStyle({
-                FontSize { 14_pt },
-                Border { 0 },
-                Padding { 0 },
-                Margin { 0 },
-                Expanding(),
-            });
-            AObject::biConnect(note->title, it->text());
+                _new<TitleTextArea>(*note->title) AUI_LET {
+                it->setCustomStyle({
+                  FontSize { 14_pt },
+                  Border { 0 },
+                  Padding { 0 },
+                  Margin { 0 },
+                  Expanding(),
+                });
+                AObject::biConnect(note->title, it->text());
+            }
         }
-    }}
+    }
     AUI_WITH_STYLE {
         Padding { 4_dp, 8_dp },
         BorderRadius { 8_dp },
@@ -367,8 +361,8 @@ _<AView> MainWindow::notePreview(const _<Note>& note) {
 
 void MainWindow::recomputeFiltered() {
     static constexpr auto NOTES_SORT = ranges::actions::sort([](const _<Note>& a, const _<Note>& b) {
-    return std::make_tuple(!a->isPinned, a->title->lowercase()) <
-            std::make_tuple(!b->isPinned, b->title->lowercase());
+        return std::make_tuple(!a->isPinned, a->title->lowercase()) <
+               std::make_tuple(!b->isPinned, b->title->lowercase());
     });
     const auto& notes = *mNotes;
     const std::string q = utf8_fold(mSearchQuery->toStdString());
