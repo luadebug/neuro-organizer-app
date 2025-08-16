@@ -195,27 +195,31 @@ jobs:
             --jq '.[] | select(.draft == true) | .id' \
             | xargs -r -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
 
+      # Download all desktop artifacts
       - name: Download desktop artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts/desktop
           pattern: desktop-*
 
+      # Download all WinXP artifacts
       - name: Download XP artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts/winxp
           pattern: winxp-*
 
+      # Flatten all artifact files into a single folder
       - name: Merge artifacts
         run: |
           mkdir -p artifacts/all
+          # copy only actual files from both sets
           find artifacts/desktop -type f -exec cp {} artifacts/all/ \;
           find artifacts/winxp -type f -exec cp {} artifacts/all/ \;
           echo "Final files to upload:"
           ls -al artifacts/all
 
-
+      # Create a new draft release with all artifacts
       - name: Create Release Draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -224,4 +228,4 @@ jobs:
             --draft \
             --title "v${{ env.VERSION }}" \
             --target "$GITHUB_SHA" \
-            artifacts/all/*.*
+            artifacts/all/*
