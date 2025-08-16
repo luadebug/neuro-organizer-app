@@ -50,7 +50,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: 3.24.2
+          cmakeVersion: 3.20.1
           ninjaVersion: 1.10.0
 
       - name: Load Visual C++ ${{matrix.arch.vsversion}} Toolkit and Platform SDK 2010
