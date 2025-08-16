@@ -17,87 +17,22 @@ permissions:
   contents: write
 
 jobs:
-
-  build-desktop-winxp:
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ x86, x64 ]
-        toolset: [ 14.29, 14.44 ]
-        image: [ windows-2022 ]
-    runs-on: ${{ matrix.image }}
-    name: Build-${{ matrix.toolset }} (${{ matrix.arch }})
-    steps:
-      - name: Fetch sources
-        uses: actions/checkout@v4
-
-      # Cache AUI boot directory
-      - name: Cache AUI.BOOT deps
-        id: cache-aui-boot
-        uses: actions/cache@v3
-        env:
-          cache-name: aui-boot
-        with:
-          path: ~/.aui
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-
-      - name: Configure CMake
-        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
-
-      - name: Build Project
-        run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo
-
-      - name: Build Tests
-        run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo --target Tests
-
-      - name: Run Tests (Windows)
-        if: runner.os == 'Windows'
-        working-directory: ${{ github.workspace }}/build/bin/RelWithDebInfo/
-        run: ${{ github.workspace }}/build/bin/RelWithDebInfo/Tests.exe
-
-      - name: Pack Windows Setup
-        if: runner.os == 'Windows'
-        working-directory: ${{ github.workspace }}/build
-        run: |
-          cmake . -DAUI_APP_PACKAGING=INNOSETUP
-          cmake --build . --config RelWithDebInfo
-          cpack . -CRelWithDebInfo -B artifacts
-
-      - name: Pack Windows Portable
-        if: runner.os == 'Windows'
-        working-directory: ${{ github.workspace }}/build
-        run: |
-          cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_ZIP
-          cmake --build . --config RelWithDebInfo
-          cpack . -CRelWithDebInfo -B artifacts
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ github.workspace }}/build/artifacts/*.*
-          name: winxp-${{ matrix.toolset }}-${{ matrix.arch }}-r${{ github.run_attempt }}
-          if-no-files-found: error
-
   build-desktop:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, ubuntu-latest ]
+        os: [ windows-2022, ubuntu-latest ]
 
     steps:
       - name: Fetch sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5.0.0
 
       # Cache AUI boot directory
       - name: Cache AUI.BOOT deps
         id: cache-aui-boot
-        uses: actions/cache@v3
+        uses: actions/cache@v4.2.4
         env:
           cache-name: aui-boot
         with:
@@ -113,7 +48,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y pkg-config libglew-dev zlib1g-dev libssl-dev libcrypt-dev libcurl4-openssl-dev libgtk-3-dev libfontconfig-dev ninja-build libpulse-dev
 
       - name: Configure CMake
-        run: cmake -G "${{ matrix.os == 'windows-latest' && 'Visual Studio 17 2022' || 'Ninja' }}" -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
+        run: cmake -G "${{ matrix.os == 'windows-latest' && 'Visual Studio 17 2022' || 'Ninja' }}" -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE  -D_WIN32_WINNT=0x502
 
       - name: Build Project
         run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo
@@ -143,7 +78,7 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: ${{ github.workspace }}/build
         run: |
-          cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_ZIP
+          cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_ZIP -D_WIN32_WINNT=0x502
           cmake --build . --config RelWithDebInfo
           cpack . -CRelWithDebInfo -B artifacts
 
@@ -174,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     if: github.event_name != 'pull_request'
-    needs: [ build-desktop, build-desktop-winxp ]
+    needs: [ build-desktop ]
     name: Release draft
     steps:
       - name: Fetch sources
@@ -202,20 +137,12 @@ jobs:
           path: artifacts/desktop
           pattern: desktop-*
 
-      # Download all WinXP artifacts
-      - name: Download XP artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/winxp
-          pattern: winxp-*
-
       # Flatten all artifact files into a single folder
       - name: Merge artifacts
         run: |
           mkdir -p artifacts/all
           # copy only actual files from both sets
           find artifacts/desktop -type f -exec cp {} artifacts/all/ \;
-          find artifacts/winxp -type f -exec cp {} artifacts/all/ \;
           echo "Final files to upload:"
           ls -al artifacts/all
 
