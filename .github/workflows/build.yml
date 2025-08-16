@@ -22,70 +22,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86
-          - x64
-        toolset:
-          - 14.29
-          - 14.44
-        image:
-          - windows-2022
-    runs-on: ${{matrix.image}}
-    name: Build-${{matrix.toolset}} (${{matrix.arch}})
+        arch: [ x86, x64 ]
+        toolset: [ 14.29, 14.44 ]
+        image: [ windows-2022 ]
+    runs-on: ${{ matrix.image }}
+    name: Build-${{ matrix.toolset }} (${{ matrix.arch }})
     steps:
-      - uses: actions/checkout@v4
-      - name: Select configuration
-        id: cfg
-        run: |
-          # OpenSSL doesn't really support Windows on ARM currently, so
-          # there are occasionally issues with it which may require ARM builds
-          # to use a different version from x86
-          if [[ "${{matrix.arch}}" = "x64_arm" || "${{matrix.arch}}" = "x64_arm64" || "${{matrix.arch}}" = "arm64" ]]; then
-            echo "openssl=${{env.OPENSSL_ARM_VERSION}}" >> "$GITHUB_OUTPUT"
-            echo "k4w=." >> "$GITHUB_OUTPUT"
-          else
-            echo "openssl=${{env.OPENSSL_VERSION}}" >> "$GITHUB_OUTPUT"
-            echo "k4w=kerberos\current\Kerberos" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "${{matrix.arch}}" = "x64_arm" ]]; then
-            # Cross-compiling from x86-64 to ARM32, a platform Microsoft never
-            # really supported building desktop applications for. Support for
-            # running them was dropped in Windows 11 24H2, and support for
-            # *building* them was dropped after Windows SDK 10.0.22621.0
-            echo "winsdk=10.0.22621.0" >> "$GITHUB_ENV"
-            echo "openssl_arch=VC-WIN32-ARM" >> "$GITHUB_ENV"
-            # No regina platform: it can't be cross-compiled.
-            echo "regina_platform=" >> "$GITHUB_ENV"
-          elif [[ "${{matrix.arch}}" = "x64_arm64" ]]; then
-            # Cross-compiling from x86-64 to ARM64
-            echo "openssl_arch=VC-WIN64-ARM" >> "$GITHUB_ENV"
-            # No regina platform: it can't be cross-compiled.
-            echo "regina_platform=" >> "$GITHUB_ENV"
-          elif [[ "${{matrix.arch}}" = "arm64" ]]; then
-            echo "openssl_arch=VC-WIN64-ARM" >> "$GITHUB_ENV"
-            echo "regina_platform=${{matrix.arch}}" >> "$GITHUB_ENV"
-          elif [[ "${{matrix.arch}}" = "x64" ]]; then
-            # An older windows SDK is required for compatibiliy with Windows XP.
-            # Newer SDKs introduce a dependency on FlsAlloc. I'm not sure which
-            # Windows 10 SDK makes this change, but this is the oldest one
-            # available on the GitHub runners at the moment and it works
-            echo "winsdk=10.0.17763.0" >> "$GITHUB_ENV"
-            echo "openssl_arch=VC-WIN64A" >> "$GITHUB_ENV"
-            echo "regina_platform=${{matrix.arch}}" >> "$GITHUB_ENV"
-          elif [[ "${{matrix.arch}}" = "x86" ]]; then
-            # See comment above
-            echo "winsdk=10.0.17763.0" >> "$GITHUB_ENV"
-            echo "openssl_arch=VC-WIN32" >> "$GITHUB_ENV"
-            echo "regina_platform=${{matrix.arch}}" >> "$GITHUB_ENV"
-          fi
-
-          if [[ "${{matrix.toolset}}" = "14.29" ]]; then
-            echo "toolsetvc=2019" >> "$GITHUB_ENV"
-          else
-            echo "toolsetvc=2022" >> "$GITHUB_ENV"
-          fi
-        shell: bash
+      - name: Fetch sources
+        uses: actions/checkout@v4
 
       # Cache AUI boot directory
       - name: Cache AUI.BOOT deps
@@ -102,22 +46,22 @@ jobs:
             ${{ runner.os }}-
 
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{matrix.additional_cmake_flags}} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
 
       - name: Build Project
-        run: cmake --build ${{github.workspace}}/build --config RelWithDebInfo
+        run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo
 
       - name: Build Tests
-        run: cmake --build ${{github.workspace}}/build --config RelWithDebInfo --target Tests
+        run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo --target Tests
 
       - name: Run Tests (Windows)
         if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}/build/bin/RelWithDebInfo/
-        run: ${{github.workspace}}/build/bin/RelWithDebInfo/Tests.exe
+        working-directory: ${{ github.workspace }}/build/bin/RelWithDebInfo/
+        run: ${{ github.workspace }}/build/bin/RelWithDebInfo/Tests.exe
 
       - name: Pack Windows Setup
         if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{ github.workspace }}/build
         run: |
           cmake . -DAUI_APP_PACKAGING=INNOSETUP
           cmake --build . --config RelWithDebInfo
@@ -125,7 +69,7 @@ jobs:
 
       - name: Pack Windows Portable
         if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{ github.workspace }}/build
         run: |
           cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_ZIP
           cmake --build . --config RelWithDebInfo
@@ -134,8 +78,9 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          path: ${{github.workspace}}/build/artifacts/*.*
-          name: winxp-${{ matrix.toolset }}-${{ matrix.arch }}
+          path: ${{ github.workspace }}/build/artifacts/*.*
+          name: winxp-${{ matrix.toolset }}-${{ matrix.arch }}-r${{ github.run_attempt }}
+          if-no-files-found: error
 
   build-desktop:
     name: ${{ matrix.os }}
@@ -143,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [ windows-latest, ubuntu-latest ]
 
     steps:
       - name: Fetch sources
@@ -165,30 +110,30 @@ jobs:
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install pkg-config libglew-dev zlib1g-dev libssl-dev libcrypt-dev libcurl4-openssl-dev libgtk-3-dev libfontconfig-dev ninja-build libpulse-dev
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libglew-dev zlib1g-dev libssl-dev libcrypt-dev libcurl4-openssl-dev libgtk-3-dev libfontconfig-dev ninja-build libpulse-dev
 
       - name: Configure CMake
-        run: cmake -G "${{ matrix.os=='windows-latest' && 'Visual Studio 17 2022' || 'Ninja' }}" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{matrix.additional_cmake_flags}} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
+        run: cmake -G "${{ matrix.os == 'windows-latest' && 'Visual Studio 17 2022' || 'Ninja' }}" -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
 
       - name: Build Project
-        run: cmake --build ${{github.workspace}}/build --config RelWithDebInfo
+        run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo
 
       - name: Build Tests
-        run: cmake --build ${{github.workspace}}/build --config RelWithDebInfo --target Tests
+        run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo --target Tests
 
       - name: Run Tests (Windows)
         if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}/build/bin/RelWithDebInfo/
-        run: ${{github.workspace}}/build/bin/RelWithDebInfo/Tests.exe
+        working-directory: ${{ github.workspace }}/build/bin/RelWithDebInfo/
+        run: ${{ github.workspace }}/build/bin/RelWithDebInfo/Tests.exe
 
       - name: Run Tests (Linux)
         if: runner.os == 'Linux'
-        working-directory: ${{github.workspace}}/build/bin
-        run: ${{github.workspace}}/build/bin/Tests
+        working-directory: ${{ github.workspace }}/build/bin
+        run: ${{ github.workspace }}/build/bin/Tests
 
       - name: Pack Windows Setup
         if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{ github.workspace }}/build
         run: |
           cmake . -DAUI_APP_PACKAGING=INNOSETUP
           cmake --build . --config RelWithDebInfo
@@ -196,7 +141,7 @@ jobs:
 
       - name: Pack Windows Portable
         if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{ github.workspace }}/build
         run: |
           cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_ZIP
           cmake --build . --config RelWithDebInfo
@@ -204,7 +149,7 @@ jobs:
 
       - name: Pack Linux Portable (ZIP)
         if: runner.os == 'Linux'
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{ github.workspace }}/build
         run: |
           cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_ZIP
           cmake --build . --config RelWithDebInfo
@@ -212,7 +157,7 @@ jobs:
 
       - name: Pack Linux Portable (tar.gz)
         if: runner.os == 'Linux'
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{ github.workspace }}/build
         run: |
           cmake . -DAUI_APP_PACKAGING=AUI_PORTABLE_TGZ
           cmake --build . --config RelWithDebInfo
@@ -221,16 +166,16 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          path: ${{github.workspace}}/build/artifacts/*.*
-          name: desktop-${{ runner.os }}
-
+          path: ${{ github.workspace }}/build/artifacts/*.*
+          name: desktop-${{ runner.os }}-r${{ github.run_attempt }}
+          if-no-files-found: error
 
   release-draft:
     runs-on: ubuntu-latest
     permissions: write-all
     if: github.event_name != 'pull_request'
-    needs: [ build-desktop, build-desktop-winxp ] 
-    name: "Release draft"
+    needs: [ build-desktop, build-desktop-winxp ]
+    name: Release draft
     steps:
       - name: Fetch sources
         uses: actions/checkout@v4
@@ -238,9 +183,9 @@ jobs:
       - name: Extract version
         run: |
           VERSION=$(grep -Po '[0-9\.]+(?= # CI_PROJECT_VERSION)' CMakeLists.txt)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "VERSION = $VERSION"
-          
+
       # Remove old release drafts
       - name: Remove Old Release Drafts
         env:
@@ -248,19 +193,26 @@ jobs:
         run: |
           gh api repos/{owner}/{repo}/releases \
             --jq '.[] | select(.draft == true) | .id' \
-            | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{} 
+            | xargs -r -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
 
       - name: Download desktop artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: artifacts/desktop
           pattern: desktop-*
-      
+
       - name: Download XP artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: artifacts/winxp
           pattern: winxp-*
+
+      - name: Merge artifacts
+        run: |
+          mkdir -p artifacts/all
+          cp -r artifacts/desktop/* artifacts/all/ || true
+          cp -r artifacts/winxp/* artifacts/all/ || true
+          ls -al artifacts/all || true
 
       - name: Create Release Draft
         env:
@@ -269,5 +221,5 @@ jobs:
           gh release create "v${{ env.VERSION }}" \
             --draft \
             --title "v${{ env.VERSION }}" \
-            --target $GITHUB_SHA \
-            artifacts/*.*
+            --target "$GITHUB_SHA" \
+            artifacts/all/*.*
