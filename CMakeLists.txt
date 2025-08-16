@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 project(project_notes_database
-        VERSION 6.0.0 # CI_PROJECT_VERSION
+        VERSION 6.0.1 # CI_PROJECT_VERSION
 )
 
 set(AUI_VERSION v8.0.0-rc.7)
