@@ -29,7 +29,6 @@ jobs:
       - name: Fetch sources
         uses: actions/checkout@v5.0.0
 
-      # Cache AUI boot directory
       - name: Cache AUI.BOOT deps
         id: cache-aui-boot
         uses: actions/cache@v4.2.4
