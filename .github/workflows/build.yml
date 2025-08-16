@@ -61,7 +61,7 @@ jobs:
           nocache: ${{vars.NOCACHE}}
 
       - name: Configure CMake
-        run: cmake -G "${{ matrix.os=='windows-2022' && 'Visual Studio 10 2010' || 'Ninja' }}" -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE -D_WIN32_WINNT=0x502 -DVS_WINDOWS_TARGET_PLATFORM_MIN_VERSION=5.1.2600
+        run: cmake -G "${{ matrix.os=='windows-2022' && 'Visual Studio 10 2010' || 'Ninja' }}" -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.additional_cmake_flags }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE -D_WIN32_WINNT=0x502 -DVS_WINDOWS_TARGET_PLATFORM_MIN_VERSION="5.1.2600"
 
       - name: Build Project
         run: cmake --build ${{ github.workspace }}/build --config RelWithDebInfo
