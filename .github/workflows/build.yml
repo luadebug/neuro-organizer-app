@@ -99,7 +99,7 @@ jobs:
           cpack . -CRelWithDebInfo -B artifacts
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           path: ${{ github.workspace }}/build/artifacts/*.*
           name: desktop-${{ runner.os }}-r${{ github.run_attempt }}
@@ -113,7 +113,7 @@ jobs:
     name: Release draft
     steps:
       - name: Fetch sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5.0.0
 
       - name: Extract version
         run: |
