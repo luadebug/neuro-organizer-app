@@ -229,7 +229,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     if: github.event_name != 'pull_request'
-    needs: [ build-desktop ]
+    needs: [ build-desktop, build-desktop-winxp ] 
     name: "Release draft"
     steps:
       - name: Fetch sources
