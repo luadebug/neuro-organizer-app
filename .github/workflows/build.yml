@@ -95,10 +95,6 @@ jobs:
           toolset: ${{matrix.toolset}}
           sdk: ${{env.winsdk}}
           #spectre: # set true to use VC libraries with sepctre mitigations
-      - name: Load Build Tools
-        uses: "./.github/actions/load-tools"
-        with:
-          nocache: ${{vars.NOCACHE}}
 
       # Cache AUI boot directory
       - name: Cache AUI.BOOT deps
