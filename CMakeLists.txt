@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.20)
 project(project_notes_database
         VERSION 7.0.3 # CI_PROJECT_VERSION
 )
