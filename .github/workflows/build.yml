@@ -61,7 +61,7 @@ jobs:
 
       - name: Run vc10.cmd to setup environment variables for MSVC 2010
         if: runner.os == 'Windows'
-        run:  & "${{github.workspace}}\vc10.cmd" /release /xp /x64
+        run: cmd.exe /c "${{github.workspace}}\vc10.cmd" /release /xp /x64
 
       - name: Configure CMake
         run: cmake -G "${{ matrix.os=='windows-2022' && 'Visual Studio 10 2010' || 'Ninja' }}" ${{ matrix.os=='windows-2022' && '-A x64' || '' }} -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE -D_WIN32_WINNT=0x502 -DVS_WINDOWS_TARGET_PLATFORM_MIN_VERSION:String="5.1.2600"
