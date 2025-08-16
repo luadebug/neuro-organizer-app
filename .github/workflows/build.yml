@@ -49,7 +49,10 @@ jobs:
 
       - name: Set up CMake (Windows)
         if: runner.os == 'Windows'
-        uses: lukka/get-cmake@v3.24.3
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.24.3
+          ninjaVersion: 1.11.1
 
       - name: Load Visual C++ ${{matrix.arch.vsversion}} Toolkit and Platform SDK 2010
         if: runner.os == 'Windows'
