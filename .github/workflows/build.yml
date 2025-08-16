@@ -250,11 +250,17 @@ jobs:
             --jq '.[] | select(.draft == true) | .id' \
             | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{} 
 
-      - name: Download artifacts
+      - name: Download desktop artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: 'true'
+          pattern: desktop-*
+      
+      - name: Download XP artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: winxp-*
 
       - name: Create Release Draft
         env:
