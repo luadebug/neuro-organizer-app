@@ -2,6 +2,7 @@
 #define PCH_H
 
 #pragma once
+#include <iomanip>
 #include <range/v3/all.hpp>
 #include <AUI/Platform/AWindow.h>
 #include <AUI/Platform/Entry.h>
