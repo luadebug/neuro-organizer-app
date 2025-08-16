@@ -210,9 +210,11 @@ jobs:
       - name: Merge artifacts
         run: |
           mkdir -p artifacts/all
-          cp -r artifacts/desktop/* artifacts/all/ || true
-          cp -r artifacts/winxp/* artifacts/all/ || true
-          ls -al artifacts/all || true
+          find artifacts/desktop -type f -exec cp {} artifacts/all/ \;
+          find artifacts/winxp -type f -exec cp {} artifacts/all/ \;
+          echo "Final files to upload:"
+          ls -al artifacts/all
+
 
       - name: Create Release Draft
         env:
