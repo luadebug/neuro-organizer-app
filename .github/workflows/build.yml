@@ -48,15 +48,18 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
         with:
-          toolset: 14.29
-          vsversion: "2019"
+          toolset: 14.2
           arch: x64
 
-      - name: Use WinXP target
+      - name: Generate Build (Windows)
         if: runner.os == 'Windows'
-        run: cmake -G "Visual Studio 16 2019" -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
+        shell: bash
+        env:
+          CC: cl.exe
+          CXX: cl.exe
+        run: cmake -G "Ninja" -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=FALSE
 
-      - name: Build Project
+      - name: Generate Build (Linux)
         if: runner.os == 'Linux'
         run: cmake -G "Ninja" -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
 
