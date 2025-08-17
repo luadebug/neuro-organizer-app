@@ -49,11 +49,12 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           toolset: 14.29
+          vsversion: "2019"
           arch: x64
 
       - name: Use WinXP target
         if: runner.os == 'Windows'
-        run: cmake -G "NMake Makefiles" -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
+        run: cmake -G "Visual Studio 16 2019" -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
 
       - name: Build Project
         if: runner.os == 'Linux'
