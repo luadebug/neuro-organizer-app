@@ -58,7 +58,7 @@ jobs:
 
       - name: Generate Build (Windows)
         if: runner.os == 'Windows'
-        run: cmake -A WIN32 -G "Visual Studio 17 2022" -T v141_xp -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=FALSE -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/toolchains/windows-xp-msvc.toolchain.cmake"
+        run: cmake -A WIN32 -G "Visual Studio 17 2022" -T v141_xp -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=FALSE -DBUILD_WINXP=1 -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/toolchains/windows-xp-msvc.toolchain.cmake"
 
       - name: Generate Build (Linux)
         if: runner.os == 'Linux'
