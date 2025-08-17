@@ -53,7 +53,7 @@ jobs:
 
       - name: Use WinXP target
         if: runner.os == 'Windows'
-        run: cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
+        run: cmake -G "NMake Makefiles" -A x64 -T v141_xp -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
 
       - name: Build Project
         if: runner.os == 'Linux'
