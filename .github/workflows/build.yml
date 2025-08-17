@@ -48,7 +48,7 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
         with:
-          toolset: 14.3
+          toolset: 14.30
           arch: x64
 
       - name: Generate Build (Windows)
