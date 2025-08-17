@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(project_notes_database
-        VERSION 9.0.0 # CI_PROJECT_VERSION
+        VERSION 9.0.1 # CI_PROJECT_VERSION
 )
 
 set(AUI_VERSION 814d9d87094ff4eb44c051ad5ad3e05efc6f2d3e)
@@ -11,7 +11,7 @@ option(BUILD_SHARED_LIBS OFF "")
 
 file(
         DOWNLOAD
-        https://raw.githubusercontent.com/aui-framework/aui/${AUI_VERSION}/aui.boot.cmake
+        https://raw.githubusercontent.com/luadebug/aui/${AUI_VERSION}/aui.boot.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
