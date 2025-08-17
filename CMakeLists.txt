@@ -3,7 +3,7 @@ project(project_notes_database
         VERSION 8.0.9 # CI_PROJECT_VERSION
 )
 
-set(AUI_VERSION v8.0.0-rc.7)
+set(AUI_VERSION 814d9d87094ff4eb44c051ad5ad3e05efc6f2d3e)
 set(UTF8PROC_VERSION 72918b954b4a85c00106842b073a4e5178209f95)
 
 option(BUILD_SHARED_LIBS OFF "")
@@ -15,7 +15,7 @@ file(
         ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
-auib_import(aui https://github.com/aui-framework/aui
+auib_import(aui https://github.com/luadebug/aui
         COMPONENTS core crypt curl image views json updater
         VERSION ${AUI_VERSION})
 
